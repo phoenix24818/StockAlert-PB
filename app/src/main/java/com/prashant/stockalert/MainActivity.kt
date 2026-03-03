@@ -12,6 +12,7 @@ import androidx.core.content.ContextCompat
 import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import com.prashant.stockalert.ui.theme.StockAlertTheme
 import com.prashant.stockalert.background.AlertScheduler
 import com.prashant.stockalert.data.AlertRepository
 import com.prashant.stockalert.data.StockRepository
@@ -68,39 +69,40 @@ class MainActivity : ComponentActivity() {
 
         // UI
         setContent {
+            StockAlertTheme {
+                var selectedTab by remember { mutableStateOf(0) }
 
-            var selectedTab by remember { mutableStateOf(0) }
+                Column {
 
-            Column {
+                    TabRow(selectedTabIndex = selectedTab) {
+                        Tab(
+                            selected = selectedTab == 0,
+                            onClick = { selectedTab = 0 },
+                            text = { Text("Watchlist") }
+                        )
+                        Tab(
+                            selected = selectedTab == 1,
+                            onClick = { selectedTab = 1 },
+                            text = { Text("Alerts") }
+                        )
+                        Tab(
+                            selected = selectedTab == 2,
+                            onClick = { selectedTab = 2 },
+                            text = { Text("History") }
+                        )
+                        Tab(
+                            selected = selectedTab == 3,
+                            onClick = { selectedTab = 3 },
+                            text = { Text("Advanced") }
+                        )
+                    }
 
-                TabRow(selectedTabIndex = selectedTab) {
-                    Tab(
-                        selected = selectedTab == 0,
-                        onClick = { selectedTab = 0 },
-                        text = { Text("Watchlist") }
-                    )
-                    Tab(
-                        selected = selectedTab == 1,
-                        onClick = { selectedTab = 1 },
-                        text = { Text("Alerts") }
-                    )
-                    Tab(
-                        selected = selectedTab == 2,
-                        onClick = { selectedTab = 2 },
-                        text = { Text("History") }
-                    )
-                    Tab(
-                        selected = selectedTab == 3,
-                        onClick = { selectedTab = 3 },
-                        text = { Text("Advanced") }
-                    )
-                }
-
-                when (selectedTab) {
-                    0 -> WatchlistScreen(viewModel)
-                    1 -> AlertsScreen(viewModel)
-                    2 -> HistoryScreen(viewModel)
-                    3 -> AdvancedScreen()
+                    when (selectedTab) {
+                        0 -> WatchlistScreen(viewModel)
+                        1 -> AlertsScreen(viewModel)
+                        2 -> HistoryScreen(viewModel)
+                        3 -> AdvancedScreen()
+                    }
                 }
             }
         }
