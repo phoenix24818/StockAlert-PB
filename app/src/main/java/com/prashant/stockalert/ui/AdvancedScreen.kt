@@ -17,77 +17,89 @@ fun AdvancedScreen() {
     val context = LocalContext.current
     var sanityEnabled by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-
-        Text(
-            "Advanced / Diagnostics",
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+    Scaffold(
+        topBar = { CenterAlignedTopAppBar(title = { Text("Advanced") }) }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+
+            Text(
+                "Advanced / Diagnostics",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             ) {
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
 
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        "Sanity Test Mode",
-                        style = MaterialTheme.typography.titleSmall
-                    )
-                    Text(
-                        "Test stock fetch & notification (TCS.BO)",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "Sanity Test Mode",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        Text(
+                            "Test stock fetch & notification (TCS.BO)",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
 
-                Switch(
-                    checked = sanityEnabled,
-                    onCheckedChange = { enabled ->
-                        sanityEnabled = enabled
+                    Switch(
+                        checked = sanityEnabled,
+                        onCheckedChange = { enabled ->
+                            sanityEnabled = enabled
 
-                        if (enabled) {
-                            SanityTestRunner.run(context) { success, message ->
-                                Toast.makeText(
-                                    context,
-                                    message,
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                            if (enabled) {
+                                SanityTestRunner.run(context) { success, message ->
+                                    Toast.makeText(
+                                        context,
+                                        message,
+                                        Toast.LENGTH_SHORT
+                                    ).show()
 
-                                // auto-reset
-                                sanityEnabled = false
+                                    // auto-reset
+                                    sanityEnabled = false
+                                }
                             }
                         }
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            Button(
+                onClick = {
+                    ManualCheckRunner.run(context) { error ->
+                        Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
                     }
-                )
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Check alerts now")
             }
         }
     }
+}
 
-    Spacer(Modifier.height(16.dp))
-
-    Button(
-        onClick = {
-            ManualCheckRunner.run(context) { error ->
-                Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
-            }
-        },
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Text("Check alerts now")
+@Preview(showBackground = true)
+@Composable
+fun AdvancedPreview() {
+    StockAlertTheme {
+        AdvancedScreen()
     }
-
 }

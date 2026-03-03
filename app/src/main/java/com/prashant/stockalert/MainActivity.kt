@@ -12,6 +12,12 @@ import androidx.core.content.ContextCompat
 import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import androidx.compose.material3.icons.Icons
+import androidx.compose.material3.icons.filled.Add
+import androidx.compose.material3.icons.filled.History
+import androidx.compose.material3.icons.filled.List
+import androidx.compose.material3.icons.filled.Notifications
+import androidx.compose.material3.icons.filled.Settings
 import com.prashant.stockalert.ui.theme.StockAlertTheme
 import com.prashant.stockalert.background.AlertScheduler
 import com.prashant.stockalert.data.AlertRepository
@@ -24,6 +30,20 @@ import com.prashant.stockalert.ui.WatchlistScreen
 import com.prashant.stockalert.ui.AlertsScreen
 import com.prashant.stockalert.ui.HistoryScreen
 
+// navigation helper
+import androidx.compose.ui.graphics.vector.ImageVector
+
+
+sealed class Screen(val title: String, val icon: ImageVector) {
+    object Watchlist : Screen("Watchlist", Icons.Default.List)
+    object Alerts : Screen("Alerts", Icons.Default.Notifications)
+    object History : Screen("History", Icons.Default.History)
+    object Advanced : Screen("Advanced", Icons.Default.Settings)
+
+    companion object {
+        fun values() = listOf(Watchlist, Alerts, History, Advanced)
+    }
+}
 
 class MainActivity : ComponentActivity() {
 
@@ -70,38 +90,49 @@ class MainActivity : ComponentActivity() {
         // UI
         setContent {
             StockAlertTheme {
-                var selectedTab by remember { mutableStateOf(0) }
+                // navigation state
+                var currentScreen by remember { mutableStateOf<Screen>(Screen.Watchlist) }
+                // state for watchlist add dialog
+                var showAddStock by remember { mutableStateOf(false) }
 
-                Column {
-
-                    TabRow(selectedTabIndex = selectedTab) {
-                        Tab(
-                            selected = selectedTab == 0,
-                            onClick = { selectedTab = 0 },
-                            text = { Text("Watchlist") }
-                        )
-                        Tab(
-                            selected = selectedTab == 1,
-                            onClick = { selectedTab = 1 },
-                            text = { Text("Alerts") }
-                        )
-                        Tab(
-                            selected = selectedTab == 2,
-                            onClick = { selectedTab = 2 },
-                            text = { Text("History") }
-                        )
-                        Tab(
-                            selected = selectedTab == 3,
-                            onClick = { selectedTab = 3 },
-                            text = { Text("Advanced") }
-                        )
+                Scaffold(
+                    topBar = {
+                        CenterAlignedTopAppBar(title = { Text(currentScreen.title) })
+                    },
+                    bottomBar = {
+                        NavigationBar {
+                            Screen.values().forEach { screen ->
+                                NavigationBarItem(
+                                    icon = { Icon(screen.icon, contentDescription = screen.title) },
+                                    label = { Text(screen.title) },
+                                    selected = currentScreen == screen,
+                                    onClick = { currentScreen = screen }
+                                )
+                            }
+                        }
+                    },
+                    floatingActionButton = {
+                        when (currentScreen) {
+                            Screen.Watchlist -> {
+                                FloatingActionButton(onClick = { showAddStock = true }) {
+                                    Icon(Icons.Default.Add, contentDescription = "Add stock")
+                                }
+                            }
+                            else -> { /* no FAB */ }
+                        }
                     }
-
-                    when (selectedTab) {
-                        0 -> WatchlistScreen(viewModel)
-                        1 -> AlertsScreen(viewModel)
-                        2 -> HistoryScreen(viewModel)
-                        3 -> AdvancedScreen()
+                ) { padding ->
+                    Box(modifier = Modifier.padding(padding)) {
+                        when (currentScreen) {
+                            Screen.Watchlist -> WatchlistScreen(
+                                viewModel = viewModel,
+                                showAdd = showAddStock,
+                                onShowAddChange = { showAddStock = it }
+                            )
+                            Screen.Alerts -> AlertsScreen(viewModel)
+                            Screen.History -> HistoryScreen(viewModel)
+                            Screen.Advanced -> AdvancedScreen()
+                        }
                     }
                 }
             }
@@ -126,4 +157,55 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+}
+
+@Preview(showBackground = true, widthDp = 360, heightDp = 640)
+@Composable
+fun MainScreenPreview() {
+    StockAlertTheme {
+        var currentScreen by remember { mutableStateOf<Screen>(Screen.Watchlist) }
+        var showAddStock by remember { mutableStateOf(false) }
+
+        Scaffold(
+            topBar = {
+                CenterAlignedTopAppBar(title = { Text(currentScreen.title) })
+            },
+            bottomBar = {
+                NavigationBar {
+                    Screen.values().forEach { screen ->
+                        NavigationBarItem(
+                            icon = { Icon(screen.icon, contentDescription = screen.title) },
+                            label = { Text(screen.title) },
+                            selected = currentScreen == screen,
+                            onClick = { currentScreen = screen }
+                        )
+                    }
+                }
+            },
+            floatingActionButton = {
+                if (currentScreen == Screen.Watchlist) {
+                    FloatingActionButton(onClick = { showAddStock = true }) {
+                        Icon(Icons.Default.Add, contentDescription = "Add")
+                    }
+                }
+            }
+        ) { padding ->
+            Box(modifier = Modifier.padding(padding)) {
+                when (currentScreen) {
+                    Screen.Watchlist -> WatchlistContent(
+                        stocks = listOf(
+                            com.prashant.stockalert.data.local.StockEntity("TCS.BO", "Tata Consultancy", 3000.0)
+                        ),
+                        onAddStock = { _, _ -> },
+                        onAddAlert = {},
+                        onEdit = {},
+                        onDelete = {}
+                    )
+                    Screen.Alerts -> Text("Alerts content")
+                    Screen.History -> Text("History content")
+                    Screen.Advanced -> Text("Advanced content")
+                }
+            }
+        }
+    }
 }

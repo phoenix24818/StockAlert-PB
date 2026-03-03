@@ -4,135 +4,53 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
+import androidx.compose.material3.icons.Icons
+import androidx.compose.material3.icons.filled.Add
+import androidx.compose.material3.icons.filled.Delete
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.prashant.stockalert.data.local.AlertType
 import com.prashant.stockalert.data.local.StockEntity
 
 @Composable
-fun WatchlistScreen(viewModel: StockViewModel) {
-
+fun WatchlistScreen(
+    viewModel: StockViewModel,
+    showAdd: Boolean,
+    onShowAddChange: (Boolean) -> Unit
+) {
     val stocks by viewModel.stocks.collectAsState()
-
-    var symbol by remember { mutableStateOf("") }
-    var buyPrice by remember { mutableStateOf("") }
 
     var stockForAlert by remember { mutableStateOf<StockEntity?>(null) }
     var stockForEdit by remember { mutableStateOf<StockEntity?>(null) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-
-        /* -------- ADD STOCK -------- */
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(4.dp)
-        ) {
-            Column(Modifier.padding(16.dp)) {
-
-                OutlinedTextField(
-                    value = symbol,
-                    onValueChange = { symbol = it },
-                    label = { Text("Stock Symbol (e.g. TCS.BO)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = buyPrice,
-                    onValueChange = { buyPrice = it },
-                    label = { Text("Buy Price") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(Modifier.height(12.dp))
-
-                Button(
-                    onClick = {
-                        val price = buyPrice.toDoubleOrNull()
-                        if (symbol.isNotBlank() && price != null) {
-                            viewModel.addStock(symbol.trim(), price)
-                            symbol = ""
-                            buyPrice = ""
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Add Stock")
-                }
-            }
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(title = { Text("Watchlist") })
         }
-
-        Spacer(Modifier.height(16.dp))
-
-        /* -------- STOCK LIST -------- */
-        LazyColumn(
-            modifier = Modifier.weight(1f)
-        ) {
-            items(stocks) { stock ->
-
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp)
-                ) {
-                    Column(Modifier.padding(16.dp)) {
-
-                        Text(
-                            stock.name,
-                            style = MaterialTheme.typography.titleMedium
-                        )
-
-                        Text(
-                            stock.symbol,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        Spacer(Modifier.height(4.dp))
-
-                        Text("Buy price: ₹${stock.buyPrice}")
-
-                        Spacer(Modifier.height(8.dp))
-
-                        Row {
-                            Button(
-                                onClick = { stockForAlert = stock },
-                                modifier = Modifier.padding(end = 8.dp)
-                            ) {
-                                Text("Add Alert")
-                            }
-
-                            OutlinedButton(
-                                onClick = { stockForEdit = stock }
-                            ) {
-                                Text("Edit Buy Price")
-                            }
-                        }
-
-                        Spacer(Modifier.height(8.dp))
-
-                        OutlinedButton(
-                            onClick = { viewModel.deleteStock(stock) },
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Text("Delete Stock")
-                        }
-                    }
-                }
-            }
-        }
+    ) { padding ->
+        WatchlistContent(
+            stocks = stocks,
+            onAddStock = { symbol, price -> viewModel.addStock(symbol, price) },
+            onAddAlert = { stockForAlert = it },
+            onEdit = { stockForEdit = it },
+            onDelete = { viewModel.deleteStock(it) },
+            modifier = Modifier.padding(padding).padding(16.dp)
+        )
     }
 
-    /* -------- ADD ALERT DIALOG -------- */
+    if (showAdd) {
+        AddStockDialog(
+            onAdd = { symbol, price ->
+                viewModel.addStock(symbol, price)
+                onShowAddChange(false)
+            },
+            onDismiss = { onShowAddChange(false) }
+        )
+    }
+
     stockForAlert?.let { stock ->
         AddAlertDialog(
             stockSymbol = stock.symbol,
@@ -149,7 +67,6 @@ fun WatchlistScreen(viewModel: StockViewModel) {
         )
     }
 
-    /* -------- EDIT BUY PRICE DIALOG -------- */
     stockForEdit?.let { stock ->
         EditBuyPriceDialog(
             stock = stock,
@@ -160,6 +77,135 @@ fun WatchlistScreen(viewModel: StockViewModel) {
             }
         )
     }
+}
+
+@Composable
+fun WatchlistContent(
+    stocks: List<StockEntity>,
+    onAddStock: (String, Double) -> Unit,
+    onAddAlert: (StockEntity) -> Unit,
+    onEdit: (StockEntity) -> Unit,
+    onDelete: (StockEntity) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+    ) {
+        if (stocks.isEmpty()) {
+            Text(
+                "No stocks added yet. Tap + to add.",
+                modifier = Modifier.align(Alignment.Center),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        } else {
+            LazyColumn {
+                items(stocks) { stock ->
+                    StockListItem(
+                        stock = stock,
+                        onAddAlert = { onAddAlert(stock) },
+                        onEdit = { onEdit(stock) },
+                        onDelete = { onDelete(stock) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun WatchlistPreview() {
+    StockAlertTheme {
+        WatchlistContent(
+            stocks = listOf(
+                StockEntity(symbol = "TCS.BO", name = "Tata Consultancy", buyPrice = 3100.0),
+                StockEntity(symbol = "INFY.BO", name = "Infosys", buyPrice = 1250.0)
+            ),
+            onAddStock = { _, _ -> },
+            onAddAlert = {},
+            onEdit = {},
+            onDelete = {}
+        )
+    }
+}
+
+@Composable
+fun StockListItem(
+    stock: StockEntity,
+    onAddAlert: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(stock.name, style = MaterialTheme.typography.titleMedium)
+            Text(
+                stock.symbol,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(4.dp))
+            Text("Buy price: ₹${stock.buyPrice}")
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = onAddAlert) { Text("Alert") }
+                Spacer(Modifier.width(8.dp))
+                TextButton(onClick = onEdit) { Text("Edit") }
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AddStockDialog(
+    onAdd: (String, Double) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var symbol by remember { mutableStateOf("") }
+    var price by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add stock") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = symbol,
+                    onValueChange = { symbol = it },
+                    label = { Text("Symbol") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = price,
+                    onValueChange = { price = it },
+                    label = { Text("Buy price") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                val p = price.toDoubleOrNull()
+                if (symbol.isNotBlank() && p != null) {
+                    onAdd(symbol.trim(), p)
+                }
+            }) { Text("Add") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 /* ================= ADD ALERT DIALOG ================= */
